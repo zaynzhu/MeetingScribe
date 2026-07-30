@@ -1,0 +1,30 @@
+{
+  "name": "meeting-scribe",
+  "version": "1.0.0",
+  "description": "会议录音转结构化纪要桌面应用",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:frontend": "vite",
+    "dev:backend": "cd backend && python main.py",
+    "build": "vite build && electron-builder",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^9.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "concurrently": "^9.2.0",
+    "electron": "^36.5.0",
+    "electron-builder": "^26.0.12",
+    "tailwindcss": "^4.1.11",
+    "vite": "^7.0.6",
+    "wait-on": "^8.0.3"
+  }
+}
