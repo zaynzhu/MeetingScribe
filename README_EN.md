@@ -34,7 +34,7 @@ Meeting recordings to structured minutes — local ASR + LLM, your data stays on
 - **Local ASR Transcription** -- Runs on-device via faster-whisper, audio never leaves your machine
 - **LLM Structured Extraction** -- Supports both OpenAI-compatible and Anthropic protocols, automatically extracts summaries, decisions, action items, and timelines
 - **Action Item Tracking** -- Automatically identifies owners and deadlines at a glance
-- **Timeline Review** -- Segmented by topic, click to jump to the corresponding time range
+- **Timeline Review** -- Segmented by topic with time ranges, structured overview of the meeting flow
 - **History Management** -- SQLite local storage for reviewing past meetings anytime
 - **Markdown Export** -- One-click export of formatted minutes for sharing and archiving
 - **Configurable API** -- Supports any OpenAI-compatible service (Qwen, GLM, DeepSeek, etc.)
