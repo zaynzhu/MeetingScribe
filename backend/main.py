@@ -31,6 +31,7 @@ db.init_db()
 # --- 请求/响应模型 ---
 
 class LLMConfig(BaseModel):
+    provider: str | None = None
     base_url: str | None = None
     api_key: str | None = None
     model: str | None = None
@@ -132,6 +133,7 @@ async def delete_meeting(meeting_id: int):
 async def set_llm_config(config: LLMConfig):
     """设置 LLM API 配置"""
     llm.set_config(
+        provider=config.provider,
         base_url=config.base_url,
         api_key=config.api_key,
         model=config.model,

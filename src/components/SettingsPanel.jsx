@@ -1,6 +1,21 @@
 import React, { useState, useEffect } from 'react'
 
+// 各协议的默认配置，切换协议时自动填入
+const PROVIDER_DEFAULTS = {
+  openai: {
+    label: 'OpenAI 兼容',
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-plus',
+  },
+  anthropic: {
+    label: 'Anthropic Claude',
+    base_url: 'https://api.anthropic.com',
+    model: 'claude-sonnet-5',
+  },
+}
+
 export default function SettingsPanel({ backendUrl, onClose }) {
+  const [provider, setProvider] = useState('openai')
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [model, setModel] = useState('')
@@ -12,11 +27,21 @@ export default function SettingsPanel({ backendUrl, onClose }) {
     fetch(`${backendUrl}/api/config/llm`)
       .then(r => r.json())
       .then(data => {
+        setProvider(data.provider || 'openai')
         setBaseUrl(data.base_url || '')
         setModel(data.model || '')
       })
       .catch(() => {})
   }, [backendUrl])
+
+  // 切换协议：自动填入该协议默认 URL 和模型，清空旧 key
+  const handleProviderChange = (p) => {
+    setProvider(p)
+    const def = PROVIDER_DEFAULTS[p]
+    setBaseUrl(def.base_url)
+    setModel(def.model)
+    setApiKey('')
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -26,6 +51,7 @@ export default function SettingsPanel({ backendUrl, onClose }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          provider: provider || undefined,
           base_url: baseUrl || undefined,
           api_key: apiKey || undefined,
           model: model || undefined,
@@ -58,12 +84,30 @@ export default function SettingsPanel({ backendUrl, onClose }) {
 
         <div className="space-y-4">
           <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1">API 协议</label>
+            <select
+              value={provider}
+              onChange={e => handleProviderChange(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              {Object.entries(PROVIDER_DEFAULTS).map(([key, val]) => (
+                <option key={key} value={key}>{val.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">
+              {provider === 'anthropic'
+                ? '适用于 Anthropic Claude 官方 API'
+                : '适用于百炼 / Qwen / GLM / DeepSeek / OpenAI 等兼容服务'}
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">API Base URL</label>
             <input
               type="text"
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
-              placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+              placeholder={PROVIDER_DEFAULTS[provider].base_url}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -85,7 +129,7 @@ export default function SettingsPanel({ backendUrl, onClose }) {
               type="text"
               value={model}
               onChange={e => setModel(e.target.value)}
-              placeholder="qwen-plus"
+              placeholder={PROVIDER_DEFAULTS[provider].model}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>

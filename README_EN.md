@@ -32,7 +32,7 @@ Meeting recordings to structured minutes — local ASR + LLM, your data stays on
 
 - **Drag & Drop Upload** -- Drop in mp3/wav/m4a audio files with zero learning curve
 - **Local ASR Transcription** -- Runs on-device via faster-whisper, audio never leaves your machine
-- **LLM Structured Extraction** -- OpenAI-compatible API automatically extracts summaries, decisions, action items, and timelines
+- **LLM Structured Extraction** -- Supports both OpenAI-compatible and Anthropic protocols, automatically extracts summaries, decisions, action items, and timelines
 - **Action Item Tracking** -- Automatically identifies owners and deadlines at a glance
 - **Timeline Review** -- Segmented by topic, click to jump to the corresponding time range
 - **History Management** -- SQLite local storage for reviewing past meetings anytime
@@ -102,15 +102,19 @@ npm run dev
 
 ### Configure LLM API
 
-Click "LLM Settings" in the bottom-left corner and fill in:
+Click "LLM Settings" in the bottom-left corner, pick an API protocol, then fill in the endpoint and key:
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| API Base URL | OpenAI-compatible API endpoint | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| API Protocol | `OpenAI-compatible` or `Anthropic Claude` | defaults to OpenAI-compatible |
+| API Base URL | API endpoint (switching protocol auto-fills the default) | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | API Key | API secret key | `sk-xxx` |
-| Model Name | Model to use | `qwen-plus` |
+| Model Name | Model to use | `qwen-plus` / `claude-sonnet-5` |
 
-Supported services include: Qwen, GLM, DeepSeek, OpenAI, and any OpenAI-compatible API.
+Two protocols:
+
+- **OpenAI-compatible** (default, DashScope/Bailian): works with Qwen, GLM, DeepSeek, OpenAI, and any OpenAI-compatible service. Defaults to the Bailian endpoint and `qwen-plus`.
+- **Anthropic Claude**: for the official Anthropic API. Defaults to `https://api.anthropic.com` and `claude-sonnet-5` — just paste your Anthropic API Key.
 
 ### Local ASR Transcription
 
@@ -200,7 +204,7 @@ Currently mp3, wav, and m4a. More format support is planned for future releases.
 <details>
 <summary>How do I switch LLM services?</summary>
 
-Click "LLM Settings" in the bottom-left corner and update the API Base URL, API Key, and Model Name. Any OpenAI-compatible API is supported.
+Click "LLM Settings" in the bottom-left corner, pick the API protocol (OpenAI-compatible or Anthropic), then update the API Base URL, API Key, and Model Name. Any OpenAI-compatible service or the Anthropic API is supported.
 
 </details>
 

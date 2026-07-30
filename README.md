@@ -32,7 +32,7 @@
 
 - **拖拽上传** -- 直接拖入 mp3/wav/m4a 音频文件，零学习成本
 - **本地 ASR 转录** -- 基于 faster-whisper 本地运行，音频数据不上传云端
-- **LLM 结构化提取** -- OpenAI 兼容 API，自动提取会议摘要、关键决策、行动项、时间线
+- **LLM 结构化提取** -- 支持 OpenAI 兼容 / Anthropic 双协议，自动提取会议摘要、关键决策、行动项、时间线
 - **行动项追踪** -- 自动识别负责人和截止日期，一目了然
 - **时间线回溯** -- 按话题分段，点击即可定位到对应时间段
 - **历史记录** -- SQLite 本地存储，随时查阅过往会议
@@ -102,15 +102,19 @@ npm run dev
 
 ### 配置 LLM API
 
-点击左下角「LLM 设置」，填入：
+点击左下角「LLM 设置」，先选 API 协议，再填入地址和密钥：
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
-| API Base URL | OpenAI 兼容 API 地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| API 协议 | `OpenAI 兼容` 或 `Anthropic Claude` | 默认 OpenAI 兼容 |
+| API Base URL | API 地址（切换协议会自动填默认值） | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | API Key | API 密钥 | `sk-xxx` |
-| 模型名称 | 使用的模型 | `qwen-plus` |
+| 模型名称 | 使用的模型 | `qwen-plus` / `claude-sonnet-5` |
 
-支持的服务包括：通义千问（Qwen）、智谱 GLM、DeepSeek、OpenAI 等任意 OpenAI 兼容 API。
+两种协议：
+
+- **OpenAI 兼容**（默认，百炼）：适用于通义千问（Qwen）、智谱 GLM、DeepSeek、OpenAI 等任意 OpenAI 兼容服务。默认填入百炼地址和 `qwen-plus`。
+- **Anthropic Claude**：适用于 Anthropic 官方 API。默认填入 `https://api.anthropic.com` 和 `claude-sonnet-5`，填入你的 Anthropic API Key 即可。
 
 ### 本地 ASR 转录
 
@@ -200,7 +204,7 @@ MeetingScribe/
 <details>
 <summary>如何更换 LLM 服务？</summary>
 
-点击左下角「LLM 设置」，修改 API Base URL、API Key 和模型名称即可。支持任意 OpenAI 兼容 API。
+点击左下角「LLM 设置」，先选 API 协议（OpenAI 兼容或 Anthropic），再修改 API Base URL、API Key 和模型名称即可。支持任意 OpenAI 兼容服务或 Anthropic 官方 API。
 
 </details>
 
