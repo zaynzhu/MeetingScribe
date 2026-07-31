@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { spawn } = require('child_process')
 
 let mainWindow
@@ -64,15 +65,16 @@ ipcMain.handle('select-file', async () => {
   return result.filePaths[0]
 })
 
-ipcMain.handle('save-file', async (_event, defaultName) => {
+ipcMain.handle('save-file', async (_event, defaultName, content) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName,
     filters: [
       { name: 'Markdown 文件', extensions: ['md'] },
     ],
   })
-  if (result.canceled) return null
-  return result.filePath
+  if (result.canceled) return { ok: false }
+  fs.writeFileSync(result.filePath, content, 'utf-8')
+  return { ok: true, path: result.filePath }
 })
 
 ipcMain.handle('get-backend-url', () => PYTHON_BACKEND_URL)

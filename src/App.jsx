@@ -6,10 +6,10 @@ import HistoryPanel from './components/HistoryPanel'
 import SettingsPanel from './components/SettingsPanel'
 import ExportButton from './components/ExportButton'
 
-// 后端地址（开发环境默认）
-const BACKEND_URL = 'http://127.0.0.1:8765'
-
 export default function App() {
+  // 后端地址：默认 8765，Electron 模式下从主进程获取实际地址
+  const [backendUrl, setBackendUrl] = useState('http://127.0.0.1:8765')
+
   // 当前状态
   const [currentFile, setCurrentFile] = useState(null)
   const [currentMeeting, setCurrentMeeting] = useState(null)
@@ -31,13 +31,20 @@ export default function App() {
   // 加载历史记录
   const loadMeetings = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/meetings`)
+      const res = await fetch(`${backendUrl}/api/meetings`)
       if (res.ok) {
         const data = await res.json()
         setMeetings(data)
       }
     } catch (e) {
       // 后端未就绪时忽略
+    }
+  }, [backendUrl])
+
+  // Electron 模式下从主进程获取后端地址（浏览器模式保留默认值）
+  useEffect(() => {
+    if (window.electronAPI?.getBackendUrl) {
+      window.electronAPI.getBackendUrl().then(setBackendUrl)
     }
   }, [])
 
@@ -58,7 +65,7 @@ export default function App() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch(`${BACKEND_URL}/api/transcribe`, {
+      const res = await fetch(`${backendUrl}/api/transcribe`, {
         method: 'POST',
         body: formData,
       })
@@ -85,7 +92,7 @@ export default function App() {
     setError('')
     setIsSummarizing(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/api/summarize/${currentMeeting}`, {
+      const res = await fetch(`${backendUrl}/api/summarize/${currentMeeting}`, {
         method: 'POST',
       })
 
@@ -107,7 +114,7 @@ export default function App() {
   // 从历史记录加载
   const handleSelectMeeting = async (id) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/meetings/${id}`)
+      const res = await fetch(`${backendUrl}/api/meetings/${id}`)
       if (res.ok) {
         const data = await res.json()
         setCurrentMeeting(data.id)
@@ -140,7 +147,7 @@ export default function App() {
   const handleDeleteMeeting = async (id) => {
     if (!confirm('确定要删除这条记录吗？')) return
     try {
-      await fetch(`${BACKEND_URL}/api/meetings/${id}`, { method: 'DELETE' })
+      await fetch(`${backendUrl}/api/meetings/${id}`, { method: 'DELETE' })
       if (currentMeeting === id) {
         setCurrentMeeting(null)
         setCurrentFile(null)
@@ -197,7 +204,7 @@ export default function App() {
             onClick={() => setShowSettings(true)}
             className="w-full px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center gap-1.5"
           >
-            <span>⚙️</span> LLM 设置
+            <span>⚙️</span> 设置
           </button>
         </div>
       </aside>
@@ -243,7 +250,7 @@ export default function App() {
             )}
             {currentMeeting && (
               <ExportButton
-                backendUrl={BACKEND_URL}
+                backendUrl={backendUrl}
                 meetingId={currentMeeting}
                 filename={currentFile?.name}
               />
@@ -321,7 +328,7 @@ export default function App() {
 
       {/* 设置面板 */}
       {showSettings && (
-        <SettingsPanel backendUrl={BACKEND_URL} onClose={() => setShowSettings(false)} />
+        <SettingsPanel backendUrl={backendUrl} onClose={() => setShowSettings(false)} />
       )}
     </div>
   )

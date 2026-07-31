@@ -12,14 +12,22 @@ export default function ExportButton({ backendUrl, meetingId, filename }) {
       const data = await res.json()
 
       if (data.markdown) {
-        // 浏览器环境：创建下载链接
-        const blob = new Blob([data.markdown], { type: 'text/markdown;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = data.filename || '会议纪要.md'
-        a.click()
-        URL.revokeObjectURL(url)
+        if (window.electronAPI?.saveFile) {
+          // Electron：原生保存对话框，主进程直接写文件
+          const r = await window.electronAPI.saveFile(data.filename || '会议纪要.md', data.markdown)
+          if (r && r.ok) {
+            alert(`已保存到：${r.path}`)
+          }
+        } else {
+          // 浏览器：Blob 触发下载
+          const blob = new Blob([data.markdown], { type: 'text/markdown;charset=utf-8' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = data.filename || '会议纪要.md'
+          a.click()
+          URL.revokeObjectURL(url)
+        }
       }
     } catch (e) {
       console.error('导出失败:', e)
