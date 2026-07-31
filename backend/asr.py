@@ -4,28 +4,49 @@ ASR 转录模块
 基于 faster-whisper 做本地转录，音频数据不出本机。
 首次使用会从 HuggingFace 下载模型（small 约 240MB，仅一次）。
 
-通过环境变量配置，无需改代码：
-    ASR_ENGINE       whisper（默认，真实本地转录）| mock（假数据，用于无模型环境/测试）
-    ASR_MODEL        faster-whisper 模型大小：tiny/base/small/medium/large-v3（默认 small）
-    ASR_LANGUAGE     转录语言：zh / en / auto（默认 zh）
-    ASR_DEVICE       cpu（默认）| cuda
-    ASR_COMPUTE_TYPE int8（CPU 默认，最快）| int8_float16 | float16（GPU）
+配置由 config_store 统一供给（env > config.json > 默认值），启动时灌入 _config。
+运行时通过 set_asr_config 修改，仅当 engine/model/device/compute_type 变化时才重载模型；
+只改 language 不触发重载（它只是转录时的传参）。
 
-输出格式与历史 Mock 一致：[HH:MM:SS - HH:MM:SS] 文本，便于前端和 LLM 提取复用。
+输出格式：[HH:MM:SS - HH:MM:SS] 文本，便于前端和 LLM 提取复用。
 """
 
-import os
 import time
 import random
 
-ASR_ENGINE = os.getenv('ASR_ENGINE', 'whisper').lower()
-WHISPER_MODEL = os.getenv('ASR_MODEL', 'small')
-WHISPER_LANGUAGE = os.getenv('ASR_LANGUAGE', 'zh')
-WHISPER_DEVICE = os.getenv('ASR_DEVICE', 'cpu')
-WHISPER_COMPUTE_TYPE = os.getenv('ASR_COMPUTE_TYPE', 'int8')
+# 运行时配置，启动时由 config_store.apply_to_modules 灌入
+_config = {
+    'engine': 'whisper',
+    'model': 'small',
+    'language': 'zh',
+    'device': 'cpu',
+    'compute_type': 'int8',
+}
 
 # 惰性加载的模型实例，避免启动时下载和占用内存
 _model = None
+
+# 这些字段变化需要重新加载模型；language 不在此列（只影响 transcribe 传参）
+_RELOAD_KEYS = ('engine', 'model', 'device', 'compute_type')
+
+
+def set_asr_config(engine=None, model=None, language=None, device=None, compute_type=None):
+    """更新 ASR 配置。仅当 engine/model/device/compute_type 任一变化时才重置模型。"""
+    global _model
+    changed = False
+    for key, val in [('engine', engine), ('model', model),
+                     ('device', device), ('compute_type', compute_type)]:
+        if val is not None and val != _config[key]:
+            _config[key] = val
+            changed = True
+    if language is not None:
+        _config['language'] = language  # 单独改不重载
+    if changed:
+        _model = None  # 下次 _get_model 按新配置重建
+
+
+def get_asr_config():
+    return {**_config}
 
 
 def _get_model():
@@ -34,9 +55,9 @@ def _get_model():
     if _model is None:
         from faster_whisper import WhisperModel
         _model = WhisperModel(
-            WHISPER_MODEL,
-            device=WHISPER_DEVICE,
-            compute_type=WHISPER_COMPUTE_TYPE,
+            _config['model'],
+            device=_config['device'],
+            compute_type=_config['compute_type'],
         )
     return _model
 
@@ -53,8 +74,8 @@ def _format_timestamp(seconds: float) -> str:
 def _transcribe_whisper(audio_path: str) -> str:
     """用 faster-whisper 转录，输出 [时间] 文本 分段格式。"""
     model = _get_model()
-    # language=None 时让模型自动检测；vad_filter 过滤静音段，提速并提升质量
-    language = WHISPER_LANGUAGE if WHISPER_LANGUAGE and WHISPER_LANGUAGE != 'auto' else None
+    # language=None 或 auto 时让模型自动检测；vad_filter 过滤静音段，提速并提升质量
+    language = _config['language'] if _config['language'] and _config['language'] != 'auto' else None
     segments, _info = model.transcribe(
         audio_path,
         language=language,
@@ -107,8 +128,8 @@ def transcribe_file(audio_path: str) -> str:
     """
     转录音频文件为带时间戳的文字稿。
 
-    默认走 faster-whisper 本地转录；设置 ASR_ENGINE=mock 可回退到假数据。
+    默认走 faster-whisper 本地转录；engine=mock 回退到假数据。
     """
-    if ASR_ENGINE == 'mock':
+    if _config['engine'] == 'mock':
         return _transcribe_mock()
     return _transcribe_whisper(audio_path)

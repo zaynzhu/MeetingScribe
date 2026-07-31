@@ -14,6 +14,7 @@ import uvicorn
 import db
 import asr
 import llm
+import config_store
 
 app = FastAPI(title='MeetingScribe API')
 
@@ -24,8 +25,9 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-# 初始化数据库
+# 初始化数据库，并把配置文件/env 的有效值灌进 llm/asr 模块
 db.init_db()
+config_store.apply_to_modules()
 
 
 # --- 请求/响应模型 ---
@@ -35,6 +37,18 @@ class LLMConfig(BaseModel):
     base_url: str | None = None
     api_key: str | None = None
     model: str | None = None
+
+
+class ASRConfig(BaseModel):
+    engine: str | None = None
+    model: str | None = None
+    language: str | None = None
+    device: str | None = None
+    compute_type: str | None = None
+
+
+class TranscribePathRequest(BaseModel):
+    path: str
 
 
 class MeetingCreate(BaseModel):
@@ -129,26 +143,64 @@ async def delete_meeting(meeting_id: int):
     return {'ok': True}
 
 
+def _masked_values(values: dict) -> dict:
+    """脱敏后的有效配置（api_key 只保留前 8 位），供前端展示。"""
+    out = json.loads(json.dumps(values))  # 深拷贝
+    if out.get('llm', {}).get('api_key'):
+        out['llm']['api_key'] = out['llm']['api_key'][:8] + '***'
+    return out
+
+
+@app.get('/api/config')
+async def get_config():
+    """获取全部 LLM+ASR 有效配置及每项来源（env/file/default），api_key 脱敏"""
+    values, sources = config_store.get_effective_config()
+    return {'values': _masked_values(values), 'sources': sources}
+
+
 @app.post('/api/config/llm')
 async def set_llm_config(config: LLMConfig):
-    """设置 LLM API 配置"""
+    """设置 LLM 配置：更新内存并持久化到 config.json，返回新有效值+来源"""
     llm.set_config(
         provider=config.provider,
         base_url=config.base_url,
         api_key=config.api_key,
         model=config.model,
     )
-    return {'ok': True, 'config': llm.get_config()}
+    config_store.save_config({'llm': llm.get_config()})
+    values, sources = config_store.get_effective_config()
+    return {'ok': True, 'values': _masked_values(values), 'sources': sources}
 
 
 @app.get('/api/config/llm')
 async def get_llm_config():
-    """获取当前 LLM 配置"""
-    config = llm.get_config()
-    # 隐藏 api_key
-    if config.get('api_key'):
-        config['api_key'] = config['api_key'][:8] + '***'
-    return config
+    """获取当前 LLM 配置（兼容旧前端，内部走统一配置来源）"""
+    values, _ = config_store.get_effective_config()
+    cfg = values['llm']
+    if cfg.get('api_key'):
+        cfg = {**cfg, 'api_key': cfg['api_key'][:8] + '***'}
+    return cfg
+
+
+@app.post('/api/config/asr')
+async def set_asr_config(config: ASRConfig):
+    """设置 ASR 配置：更新内存并持久化，返回新有效值+来源"""
+    asr.set_asr_config(
+        engine=config.engine,
+        model=config.model,
+        language=config.language,
+        device=config.device,
+        compute_type=config.compute_type,
+    )
+    config_store.save_config({'asr': asr.get_asr_config()})
+    values, sources = config_store.get_effective_config()
+    return {'ok': True, 'values': _masked_values(values), 'sources': sources}
+
+
+@app.post('/api/config/llm/test')
+async def test_llm_connection():
+    """测试当前 LLM 配置连通性"""
+    return llm.test_connection()
 
 
 @app.get('/api/export/{meeting_id}')

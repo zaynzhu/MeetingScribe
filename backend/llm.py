@@ -10,6 +10,7 @@ LLM 结构化提取模块
 
 import json
 import re
+import time
 from openai import OpenAI
 
 # 全局配置，通过 set_config 更新
@@ -142,3 +143,25 @@ def extract_minutes(transcript: str) -> dict:
     if _config['provider'] == 'anthropic':
         return _extract_anthropic(transcript)
     return _extract_openai(transcript)
+
+
+def test_connection() -> dict:
+    """用当前 client 发极短请求测试连通性，返回 {ok, latency_ms, error}。"""
+    start = time.time()
+    try:
+        client = _get_client()
+        if _config['provider'] == 'anthropic':
+            client.messages.create(
+                model=_config['model'],
+                max_tokens=1,
+                messages=[{'role': 'user', 'content': 'ping'}],
+            )
+        else:
+            client.chat.completions.create(
+                model=_config['model'],
+                messages=[{'role': 'user', 'content': 'ping'}],
+                max_tokens=1,
+            )
+        return {'ok': True, 'latency_ms': int((time.time() - start) * 1000), 'error': ''}
+    except Exception as e:
+        return {'ok': False, 'latency_ms': int((time.time() - start) * 1000), 'error': str(e)}
