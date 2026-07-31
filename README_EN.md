@@ -89,7 +89,7 @@ npm run dev
 ```
 
 > [!NOTE]
-> In Electron mode, the Python backend subprocess starts automatically — no need to run `python backend/main.py` manually.
+> In Electron mode, the Python backend subprocess starts automatically — no need to run `python backend/main.py` manually. File picking and export use native OS dialogs (drag-and-drop upload and browser mode also work).
 
 ## 💡 Usage
 
@@ -100,9 +100,13 @@ npm run dev
 3. Click the "Extract Minutes" button — the LLM automatically analyzes and generates structured minutes
 4. Switch between tabs to view the transcript or minutes, click "Export Markdown" to save
 
-### Configure LLM API
+### Configuration
 
-Click "LLM Settings" in the bottom-left corner, pick an API protocol, then fill in the endpoint and key:
+Click "Settings" in the bottom-left corner to configure both LLM extraction and ASR transcription in one panel. Changes take effect on save and persist to `data/config.json` (survive restart). Each field shows its source — `env` / `file` / `default`: environment variables take precedence (handy for deployment), then the config file, then code defaults. Fields overridden by an env var are locked in the panel.
+
+#### LLM Extraction
+
+Pick an API protocol, then fill in the endpoint and key:
 
 | Field | Description | Example |
 |-------|-------------|---------|
@@ -116,11 +120,13 @@ Two protocols:
 - **OpenAI-compatible** (default, DashScope/Bailian): works with Qwen, GLM, DeepSeek, OpenAI, and any OpenAI-compatible service. Defaults to the Bailian endpoint and `qwen-plus`.
 - **Anthropic Claude**: for the official Anthropic API. Defaults to `https://api.anthropic.com` and `claude-sonnet-5` — just paste your Anthropic API Key.
 
+Click "Test connection" to verify the API is reachable (sends a tiny request, shows latency or error).
+
 ### Local ASR Transcription
 
 The ASR module is built on [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (a CTranslate2 implementation of Whisper). Transcription runs fully on-device. The first run downloads the model from HuggingFace automatically (`small` is about 240MB, one-time only).
 
-Configure via environment variables, no code changes needed:
+ASR settings are also in the "Settings" panel and take effect on save: changing model/device/compute type reloads the model on the next transcription; changing language is immediate. Environment variables still work and take precedence over the config file (handy for deployment):
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -136,7 +142,7 @@ $env:ASR_DEVICE='cuda'; $env:ASR_MODEL='medium'; python backend/main.py
 ```
 
 > [!NOTE]
-> Set `ASR_ENGINE=mock` to fall back to fake data when no model is installed — handy for frontend integration and testing.
+> Set the engine to `mock` in the panel to fall back to fake data when no model is installed — handy for frontend integration and testing.
 
 ## 🏗️ Architecture
 

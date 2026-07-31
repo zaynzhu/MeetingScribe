@@ -89,7 +89,7 @@ npm run dev
 ```
 
 > [!NOTE]
-> Electron 模式下会自动启动 Python 后端子进程，无需手动运行 `python backend/main.py`。
+> Electron 模式下会自动启动 Python 后端子进程，无需手动运行 `python backend/main.py`。文件选择与导出使用系统原生对话框（拖拽上传与浏览器模式同样可用）。
 
 ## 💡 Usage
 
@@ -100,9 +100,13 @@ npm run dev
 3. 点击「提取纪要」按钮，LLM 自动分析并生成结构化纪要
 4. 切换 Tab 查看文字稿或纪要，点击「导出 Markdown」保存
 
-### 配置 LLM API
+### 配置
 
-点击左下角「LLM 设置」，先选 API 协议，再填入地址和密钥：
+点击左下角「设置」，在一个面板里配置 LLM 提取和 ASR 转录，保存即生效并持久化到 `data/config.json`（重启不丢）。每个配置项旁标注来源——`环境变量` / `文件` / `默认`：环境变量优先级最高（便于部署覆盖），其次是配置文件，最后是代码默认值。被环境变量覆盖的项面板锁定不可改。
+
+#### LLM 提取
+
+先选 API 协议，再填入地址和密钥：
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
@@ -116,11 +120,13 @@ npm run dev
 - **OpenAI 兼容**（默认，百炼）：适用于通义千问（Qwen）、智谱 GLM、DeepSeek、OpenAI 等任意 OpenAI 兼容服务。默认填入百炼地址和 `qwen-plus`。
 - **Anthropic Claude**：适用于 Anthropic 官方 API。默认填入 `https://api.anthropic.com` 和 `claude-sonnet-5`，填入你的 Anthropic API Key 即可。
 
+填好后点「测试连通」可验证 API 是否可达（发一个极短请求，显示延迟或错误）。
+
 ### 本地 ASR 转录
 
 ASR 模块基于 [faster-whisper](https://github.com/SYSTRAN/faster-whisper)（Whisper 的 CTranslate2 实现），全程本地转录，音频不出本机。首次使用会自动从 HuggingFace 下载模型（`small` 约 240MB，仅一次）。
 
-通过环境变量配置，无需改代码：
+ASR 配置同样在「设置」面板里改，保存即生效：改模型/设备/精度会在下次转录时重新加载模型，改语言即时生效。也可用环境变量配置（优先级高于配置文件，便于部署）：
 
 | 环境变量 | 说明 | 默认值 |
 |----------|------|--------|
@@ -136,7 +142,7 @@ $env:ASR_DEVICE='cuda'; $env:ASR_MODEL='medium'; python backend/main.py
 ```
 
 > [!NOTE]
-> 未安装模型时，可设置 `ASR_ENGINE=mock` 回退到假数据，便于前端联调和测试。
+> 未安装模型时，可在面板把引擎切到 `mock` 回退到假数据，便于前端联调和测试。
 
 ## 🏗️ Architecture
 
