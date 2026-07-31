@@ -97,6 +97,24 @@ async def transcribe_audio(file: UploadFile = File(...)):
     }
 
 
+@app.post('/api/transcribe/path')
+async def transcribe_path(req: TranscribePathRequest):
+    """Electron 桌面模式：直接转录本地文件路径，免上传"""
+    if not os.path.exists(req.path):
+        raise HTTPException(status_code=404, detail='文件不存在')
+    try:
+        transcript = await asyncio.to_thread(asr.transcribe_file, req.path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'转录失败: {str(e)}')
+    filename = os.path.basename(req.path)
+    meeting_id = db.save_meeting(filename, transcript)
+    return {
+        'meeting_id': meeting_id,
+        'filename': filename,
+        'transcript': transcript,
+    }
+
+
 @app.post('/api/summarize/{meeting_id}')
 async def summarize_meeting(meeting_id: int):
     """调用 LLM 提取结构化纪要"""

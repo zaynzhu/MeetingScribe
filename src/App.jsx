@@ -53,6 +53,13 @@ export default function App() {
   }, [loadMeetings])
 
   // 处理文件上传和转录
+  // 转录结果统一处理（multipart 上传与本地路径两条路径共用）
+  const applyTranscriptResult = (data) => {
+    setCurrentMeeting(data.meeting_id)
+    setTranscript(data.transcript)
+    loadMeetings()
+  }
+
   const handleFileSelected = async (file) => {
     setError('')
     setCurrentFile(file)
@@ -75,10 +82,35 @@ export default function App() {
         throw new Error(err.detail || '转录失败')
       }
 
-      const data = await res.json()
-      setCurrentMeeting(data.meeting_id)
-      setTranscript(data.transcript)
-      loadMeetings()
+      applyTranscriptResult(await res.json())
+    } catch (e) {
+      setError(`转录失败: ${e.message}`)
+    }
+    setIsTranscribing(false)
+  }
+
+  // Electron 模式：直接传本地文件路径给后端转录，免上传
+  const handleLocalPath = async (path) => {
+    setError('')
+    setCurrentFile({ name: path.split(/[\\/]/).pop() })
+    setTranscript('')
+    setMinutes(null)
+    setActiveTab('transcript')
+
+    setIsTranscribing(true)
+    try {
+      const res = await fetch(`${backendUrl}/api/transcribe/path`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || '转录失败')
+      }
+
+      applyTranscriptResult(await res.json())
     } catch (e) {
       setError(`转录失败: ${e.message}`)
     }
@@ -264,7 +296,7 @@ export default function App() {
           {!currentFile ? (
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="w-full max-w-xl">
-                <DropZone onFileSelected={handleFileSelected} disabled={isTranscribing} />
+                <DropZone onFileSelected={handleFileSelected} onLocalPath={handleLocalPath} disabled={isTranscribing} />
               </div>
             </div>
           ) : (

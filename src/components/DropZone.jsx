@@ -1,9 +1,12 @@
 import React, { useState, useRef } from 'react'
 
+// Electron 模式下有 preload 暴露的 selectFile，可走本地路径转录
+const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.selectFile
+
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/mp4', 'audio/ogg']
 const ACCEPTED_EXTS = ['.mp3', '.wav', '.m4a']
 
-export default function DropZone({ onFileSelected, disabled }) {
+export default function DropZone({ onFileSelected, onLocalPath, disabled }) {
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
@@ -27,6 +30,14 @@ export default function DropZone({ onFileSelected, disabled }) {
       return
     }
     onFileSelected(file)
+  }
+
+  // Electron 模式：调主进程原生文件选择框，拿到本地路径直接交给后端转录
+  const handleSelectLocal = async (e) => {
+    e.stopPropagation()
+    if (disabled) return
+    const filePath = await window.electronAPI.selectFile()
+    if (filePath && onLocalPath) onLocalPath(filePath)
   }
 
   const handleDrop = (e) => {
@@ -104,9 +115,19 @@ export default function DropZone({ onFileSelected, disabled }) {
 
         {/* 按钮 */}
         {!isDragging && !disabled && (
-          <button className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-            或点击选择文件
-          </button>
+          <div className="flex gap-2 justify-center">
+            <button className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              或点击选择文件
+            </button>
+            {isElectron && (
+              <button
+                onClick={handleSelectLocal}
+                className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+              >
+                从本地选择
+              </button>
+            )}
+          </div>
         )}
       </div>
 
