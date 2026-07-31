@@ -5,6 +5,9 @@ import MinutesView from './components/MinutesView'
 import HistoryPanel from './components/HistoryPanel'
 import SettingsPanel from './components/SettingsPanel'
 import ExportButton from './components/ExportButton'
+import { Mic, Plus, Settings, Sparkles, FileText, ListChecks } from './components/Icons'
+import Toast from './components/Toast'
+import ConfirmDialog from './components/ConfirmDialog'
 
 export default function App() {
   // 后端地址：默认 8765，Electron 模式下从主进程获取实际地址
@@ -27,6 +30,14 @@ export default function App() {
 
   // 设置面板
   const [showSettings, setShowSettings] = useState(false)
+
+  // 通知与确认弹窗（替代系统 alert/confirm，深色一致）
+  const [toast, setToast] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 2800)
+  }
 
   // 加载历史记录
   const loadMeetings = useCallback(async () => {
@@ -176,20 +187,26 @@ export default function App() {
   }
 
   // 删除历史记录
-  const handleDeleteMeeting = async (id) => {
-    if (!confirm('确定要删除这条记录吗？')) return
-    try {
-      await fetch(`${backendUrl}/api/meetings/${id}`, { method: 'DELETE' })
-      if (currentMeeting === id) {
-        setCurrentMeeting(null)
-        setCurrentFile(null)
-        setTranscript('')
-        setMinutes(null)
-      }
-      loadMeetings()
-    } catch (e) {
-      setError('删除失败')
-    }
+  const handleDeleteMeeting = (id) => {
+    setConfirmState({
+      msg: '确定要删除这条记录吗？',
+      onOk: async () => {
+        setConfirmState(null)
+        try {
+          await fetch(`${backendUrl}/api/meetings/${id}`, { method: 'DELETE' })
+          if (currentMeeting === id) {
+            setCurrentMeeting(null)
+            setCurrentFile(null)
+            setTranscript('')
+            setMinutes(null)
+          }
+          loadMeetings()
+          showToast('已删除')
+        } catch (e) {
+          setError('删除失败')
+        }
+      },
+    })
   }
 
   // 新建（重置状态）
@@ -203,19 +220,22 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex bg-slate-50">
+    <div className="h-screen flex">
       {/* 侧栏 - 历史记录 */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
-        <div className="p-4 border-b border-slate-100">
-          <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <span>🎙️</span> MeetingScribe
+      <aside className="w-64 bg-[#11161f] border-r border-white/5 flex flex-col shrink-0">
+        <div className="px-5 py-5 border-b border-white/5">
+          <h1 className="text-base font-semibold text-gray-100 flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-lime-500/15 text-lime-400 flex items-center justify-center">
+              <Mic width={17} height={17} />
+            </span>
+            MeetingScribe
           </h1>
-          <p className="text-xs text-slate-400 mt-1">会议录音转结构化纪要</p>
+          <p className="text-xs text-gray-500 mt-2 ml-[42px]">会议录音转结构化纪要</p>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-2">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">历史记录</p>
+            <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wider">历史记录</p>
           </div>
           <HistoryPanel
             meetings={meetings}
@@ -225,18 +245,18 @@ export default function App() {
           />
         </div>
 
-        <div className="p-3 border-t border-slate-100 space-y-2">
+        <div className="p-3 border-t border-white/5 space-y-1.5">
           <button
             onClick={handleNew}
-            className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full px-3 py-2 text-sm bg-lime-500 text-[#0b0f17] font-medium rounded-lg hover:bg-lime-400 transition-colors flex items-center justify-center gap-1.5"
           >
-            <span>+</span> 新会议
+            <Plus width={15} height={15} /> 新会议
           </button>
           <button
             onClick={() => setShowSettings(true)}
-            className="w-full px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+            className="w-full px-3 py-2 text-sm text-gray-400 hover:bg-white/5 hover:text-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1.5"
           >
-            <span>⚙️</span> 设置
+            <Settings width={15} height={15} /> 设置
           </button>
         </div>
       </aside>
@@ -244,38 +264,40 @@ export default function App() {
       {/* 主区域 */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* 顶部栏 */}
-        <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="bg-[#0f141d] border-b border-white/5 px-6 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             {currentFile ? (
               <>
-                <span className="text-lg">🎵</span>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{currentFile.name}</p>
-                  <p className="text-xs text-slate-400">
+                <span className="w-9 h-9 rounded-lg bg-lime-500/15 text-lime-400 flex items-center justify-center shrink-0">
+                  <FileText />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-100 truncate">{currentFile.name}</p>
+                  <p className="text-xs text-gray-500">
                     {isTranscribing ? '正在转录...' : isSummarizing ? '正在提取纪要...' : transcript ? '转录完成' : ''}
                   </p>
                 </div>
               </>
             ) : (
-              <p className="text-sm text-slate-400">请拖入音频文件开始</p>
+              <p className="text-sm text-gray-500">拖入音频文件开始</p>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {transcript && (
               <button
                 onClick={handleSummarize}
                 disabled={isSummarizing || isTranscribing}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm bg-lime-500 text-[#0b0f17] font-medium rounded-lg hover:bg-lime-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {isSummarizing ? (
                   <>
-                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-[#0b0f17] border-t-transparent rounded-full"></span>
                     提取中...
                   </>
                 ) : (
                   <>
-                    <span>✨</span> 提取纪要
+                    <Sparkles width={15} height={15} /> 提取纪要
                   </>
                 )}
               </button>
@@ -285,6 +307,7 @@ export default function App() {
                 backendUrl={backendUrl}
                 meetingId={currentMeeting}
                 filename={currentFile?.name}
+                onNotify={showToast}
               />
             )}
           </div>
@@ -294,34 +317,34 @@ export default function App() {
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* 未选择文件时显示拖拽区 */}
           {!currentFile ? (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="w-full max-w-xl">
+            <div className="flex-1 flex items-center justify-center p-10">
+              <div className="w-full max-w-2xl">
                 <DropZone onFileSelected={handleFileSelected} onLocalPath={handleLocalPath} disabled={isTranscribing} />
               </div>
             </div>
           ) : (
             <>
               {/* Tab 切换 */}
-              <div className="bg-white border-b border-slate-200 px-6 flex gap-0 shrink-0">
+              <div className="bg-[#0f141d] border-b border-white/5 px-6 flex gap-1 shrink-0">
                 <button
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'transcript'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                      ? 'border-lime-400 text-lime-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-300'
                   }`}
                   onClick={() => setActiveTab('transcript')}
                 >
-                  📝 文字稿
+                  <FileText width={15} height={15} /> 文字稿
                 </button>
                 <button
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'minutes'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                      ? 'border-lime-400 text-lime-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-300'
                   }`}
                   onClick={() => setActiveTab('minutes')}
                 >
-                  📋 结构化纪要
+                  <ListChecks width={15} height={15} /> 结构化纪要
                 </button>
               </div>
 
@@ -331,8 +354,8 @@ export default function App() {
                 {isTranscribing && (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center space-y-3">
-                      <div className="animate-spin w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto"></div>
-                      <p className="text-sm text-slate-500">正在转录音频...</p>
+                      <div className="animate-spin w-9 h-9 border-2 border-white/10 border-t-lime-400 rounded-full mx-auto"></div>
+                      <p className="text-sm text-gray-500 mt-3">正在转录音频...</p>
                     </div>
                   </div>
                 )}
@@ -350,9 +373,9 @@ export default function App() {
 
           {/* 错误提示 */}
           {error && (
-            <div className="mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
-              <p className="text-sm text-red-600">{error}</p>
-              <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">×</button>
+            <div className="mx-6 mb-4 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+              <p className="text-sm text-red-400">{error}</p>
+              <button onClick={() => setError('')} className="text-red-500 hover:text-red-300">✕</button>
             </div>
           )}
         </div>
@@ -361,6 +384,15 @@ export default function App() {
       {/* 设置面板 */}
       {showSettings && (
         <SettingsPanel backendUrl={backendUrl} onClose={() => setShowSettings(false)} />
+      )}
+
+      <Toast msg={toast?.msg} type={toast?.type} />
+      {confirmState && (
+        <ConfirmDialog
+          msg={confirmState.msg}
+          onOk={confirmState.onOk}
+          onCancel={() => setConfirmState(null)}
+        />
       )}
     </div>
   )

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Settings as SettingsIcon, Check } from './Icons'
 
 // 各 LLM 协议的默认配置，切换协议时自动填入
 const PROVIDER_DEFAULTS = {
@@ -14,7 +15,6 @@ const PROVIDER_DEFAULTS = {
   },
 }
 
-// ASR 各字段的可选项
 const ASR_OPTIONS = {
   engine: [['whisper', 'Whisper（本地）'], ['mock', 'Mock（假数据）']],
   model: ['tiny', 'base', 'small', 'medium', 'large-v3'],
@@ -24,12 +24,14 @@ const ASR_OPTIONS = {
 }
 
 const SOURCE_LABEL = {
-  env: { text: '环境变量', cls: 'bg-orange-100 text-orange-700' },
-  file: { text: '文件', cls: 'bg-blue-100 text-blue-700' },
-  default: { text: '默认', cls: 'bg-slate-100 text-slate-400' },
+  env: { text: '环境变量', cls: 'bg-amber-500/15 text-amber-400' },
+  file: { text: '文件', cls: 'bg-lime-500/15 text-lime-400' },
+  default: { text: '默认', cls: 'bg-white/5 text-gray-500' },
 }
 
-// 来源徽标；env 来源项不可改
+const inputCls = 'w-full px-3 py-2 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-lime-500/40 focus:border-lime-500/40 disabled:opacity-60 disabled:bg-white/[0.02]'
+const selectCls = inputCls + ' bg-[#11161f]'
+
 function SourceBadge({ source }) {
   const s = SOURCE_LABEL[source] || SOURCE_LABEL.default
   return (
@@ -66,7 +68,7 @@ export default function SettingsPanel({ backendUrl, onClose }) {
       setSources(data.sources || {})
       setProvider(v.llm.provider)
       setBaseUrl(v.llm.base_url)
-      setApiKey('') // api_key 脱敏返回，输入框留空，改时才传新值
+      setApiKey('')
       setModel(v.llm.model)
       setAsrEngine(v.asr.engine)
       setAsrModel(v.asr.model)
@@ -80,7 +82,6 @@ export default function SettingsPanel({ backendUrl, onClose }) {
 
   useEffect(() => { loadConfig() }, [backendUrl])
 
-  // 切换 LLM 协议：自动填该协议默认 URL 和模型，清空旧 key
   const handleProviderChange = (p) => {
     setProvider(p)
     const def = PROVIDER_DEFAULTS[p]
@@ -99,7 +100,7 @@ export default function SettingsPanel({ backendUrl, onClose }) {
         body: JSON.stringify({
           provider,
           base_url: baseUrl || undefined,
-          api_key: apiKey || undefined, // 空则不传，保留原值
+          api_key: apiKey || undefined,
           model: model || undefined,
         }),
       })
@@ -162,27 +163,26 @@ export default function SettingsPanel({ backendUrl, onClose }) {
   const isEnv = (key) => sources[key] === 'env'
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#0f141d] border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800">⚙️ 设置</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          <h2 className="text-base font-semibold text-gray-100 flex items-center gap-2">
+            <span className="text-lime-400"><SettingsIcon width={18} height={18} /></span>
+            设置
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-200 text-xl leading-none">✕</button>
         </div>
 
         {/* LLM 配置 */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-700 pb-1 border-b border-slate-100">LLM 提取</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider pb-1 border-b border-white/5">LLM 提取</h3>
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-medium text-slate-600">API 协议</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-medium text-gray-300">API 协议</label>
               <SourceBadge source={sources['llm.provider']} />
             </div>
-            <select
-              value={provider}
-              onChange={e => handleProviderChange(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
+            <select value={provider} onChange={e => handleProviderChange(e.target.value)} className={selectCls}>
               {Object.entries(PROVIDER_DEFAULTS).map(([key, val]) => (
                 <option key={key} value={key}>{val.label}</option>
               ))}
@@ -193,43 +193,43 @@ export default function SettingsPanel({ backendUrl, onClose }) {
             <input type="text" value={baseUrl} disabled={isEnv('llm.base_url')}
               onChange={e => setBaseUrl(e.target.value)}
               placeholder={PROVIDER_DEFAULTS[provider].base_url}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100" />
+              className={inputCls} />
           </Field>
 
           <Field label="API Key" source={sources['llm.api_key']} disabled={isEnv('llm.api_key')}>
             <input type="password" value={apiKey} disabled={isEnv('llm.api_key')}
               onChange={e => setApiKey(e.target.value)}
-              placeholder={model && sources['llm.api_key'] === 'file' ? '已配置，修改请输入新 Key' : 'sk-...'}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100" />
+              placeholder={sources['llm.api_key'] === 'file' ? '已配置，修改请输入新 Key' : 'sk-...'}
+              className={inputCls} />
           </Field>
 
           <Field label="模型名称" source={sources['llm.model']} disabled={isEnv('llm.model')}>
             <input type="text" value={model} disabled={isEnv('llm.model')}
               onChange={e => setModel(e.target.value)}
               placeholder={PROVIDER_DEFAULTS[provider].model}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100" />
+              className={inputCls} />
           </Field>
 
           <div className="flex items-center gap-2 pt-1">
             <button onClick={handleSaveLlm} disabled={savingLlm}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 text-sm bg-lime-500 text-[#0b0f17] font-medium rounded-lg hover:bg-lime-400 disabled:opacity-50">
               {savingLlm ? '保存中...' : '保存 LLM'}
             </button>
             <button onClick={handleTest} disabled={testing}
-              className="px-4 py-2 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50">
+              className="px-4 py-2 text-sm text-gray-300 border border-white/10 rounded-lg hover:bg-white/5 disabled:opacity-50">
               {testing ? '测试中...' : '测试连通'}
             </button>
           </div>
           {testResult && (
-            <p className={`text-xs px-3 py-2 rounded-lg ${testResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-              {testResult.ok ? `✓ 连通成功，延迟 ${testResult.latency_ms}ms` : `✗ 失败：${testResult.error}`}
+            <p className={`text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 ${testResult.ok ? 'bg-lime-500/10 text-lime-400' : 'bg-red-500/10 text-red-400'}`}>
+              {testResult.ok ? <><Check width={14} height={14} /> 连通成功，延迟 {testResult.latency_ms}ms</> : `✕ 失败：${testResult.error}`}
             </p>
           )}
         </section>
 
         {/* ASR 配置 */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-700 pb-1 border-b border-slate-100">ASR 转录</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider pb-1 border-b border-white/5">ASR 转录</h3>
 
           <SelectField label="引擎" source={sources['asr.engine']} value={asrEngine}
             disabled={isEnv('asr.engine')} onChange={setAsrEngine} options={ASR_OPTIONS.engine} />
@@ -243,18 +243,18 @@ export default function SettingsPanel({ backendUrl, onClose }) {
             disabled={isEnv('asr.compute_type')} onChange={setAsrComputeType} options={ASR_OPTIONS.compute_type} />
 
           <button onClick={handleSaveAsr} disabled={savingAsr}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            className="px-4 py-2 text-sm bg-lime-500 text-[#0b0f17] font-medium rounded-lg hover:bg-lime-400 disabled:opacity-50">
             {savingAsr ? '保存中...' : '保存 ASR'}
           </button>
-          <p className="text-xs text-slate-400">改模型/设备/精度会在下次转录时重新加载；改语言即时生效。</p>
+          <p className="text-xs text-gray-600">改模型/设备/精度会在下次转录时重新加载；改语言即时生效。</p>
         </section>
 
         {message && (
-          <p className={`text-sm text-center ${message.includes('已保存') ? 'text-green-600' : 'text-red-500'}`}>{message}</p>
+          <p className={`text-sm text-center ${message.includes('已保存') ? 'text-lime-400' : 'text-red-400'}`}>{message}</p>
         )}
 
-        <div className="flex justify-end pt-2 border-t border-slate-100">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">关闭</button>
+        <div className="flex justify-end pt-2 border-t border-white/5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-400 hover:bg-white/5 rounded-lg">关闭</button>
         </div>
       </div>
     </div>
@@ -264,10 +264,10 @@ export default function SettingsPanel({ backendUrl, onClose }) {
 function Field({ label, source, disabled, children }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
-        <label className="text-sm font-medium text-slate-600">
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-sm font-medium text-gray-300">
           {label}
-          {disabled && <span className="ml-1 text-[10px] text-orange-500">（被环境变量覆盖）</span>}
+          {disabled && <span className="ml-1.5 text-[10px] text-amber-400/80">被环境变量覆盖</span>}
         </label>
         <SourceBadge source={source} />
       </div>
@@ -279,8 +279,7 @@ function Field({ label, source, disabled, children }) {
 function SelectField({ label, source, value, disabled, onChange, options }) {
   return (
     <Field label={label} source={source} disabled={disabled}>
-      <select value={value} disabled={disabled} onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-slate-100">
+      <select value={value} disabled={disabled} onChange={e => onChange(e.target.value)} className={selectCls}>
         {options.map((opt) => {
           const [val, text] = Array.isArray(opt) ? opt : [opt, opt]
           return <option key={val} value={val}>{text}</option>
